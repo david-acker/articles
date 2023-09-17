@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using EnumDescription.Generators.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -8,7 +9,7 @@ public sealed partial class GetDescriptionGenerator
 {
     internal sealed class Parser
     {
-        internal const string EnumDescriptionAttribute = "EnumDescription.EnumDescriptionAttribute";
+        internal const string EnumDescriptionAttribute = "EnumDescription.Generators.EnumDescriptionAttribute";
 
         private readonly Compilation _compilation;
         private readonly Action<Diagnostic> _reportDiagnostic;
@@ -21,9 +22,9 @@ public sealed partial class GetDescriptionGenerator
             _cancellationToken = cancellationToken;
         }
 
-        public IReadOnlyList<EnumExtension> GetEnumExtensions(IEnumerable<EnumDeclarationSyntax> enumDeclarations)
+        public IEnumerable<EnumDescriptionExtension> GetEnumExtensions(IEnumerable<EnumDeclarationSyntax> enumDeclarations)
         {
-            var enumExtensionsToGenerate = new List<EnumExtension>();
+            var enumExtensionsToGenerate = new List<EnumDescriptionExtension>();
 
             var descriptionAttribute = _compilation.GetTypeByMetadataName("System.ComponentModel.DescriptionAttribute");
             if (descriptionAttribute is null)
@@ -41,9 +42,11 @@ public sealed partial class GetDescriptionGenerator
                     continue;
                 }
                 
-                ImmutableArray<ISymbol> enumMembers = enumSymbol.GetMembers();
+                ImmutableArray<IFieldSymbol> enumMembers = enumSymbol.GetMembers()
+                    .OfType<IFieldSymbol>()
+                    .ToImmutableArray();
                 
-                var memberData = new List<EnumMemberData>(enumMembers.Length);
+                var memberData = new List<EnumDescriptionMemberData>(enumMembers.Length);
                 var canGenerate = true;
                 
                 // Get all the fields from the enum, and add their name to the list
@@ -69,7 +72,7 @@ public sealed partial class GetDescriptionGenerator
                             continue;
                         }
                         
-                        memberData.Add(new EnumMemberData
+                        memberData.Add(new EnumDescriptionMemberData
                         {
                             MemberName = member.Name,
                             Value = descriptionValue
@@ -79,7 +82,7 @@ public sealed partial class GetDescriptionGenerator
 
                 if (canGenerate)
                 {
-                    var enumExtensionMethod = new EnumExtensionMethod
+                    var enumExtensionMethod = new EnumDescriptionExtensionMethod
                     {
                         Name = "GetDescription",
                         // TODO: Make unique
@@ -87,6 +90,13 @@ public sealed partial class GetDescriptionGenerator
                         EnumName = enumSymbol.ToString()
                     };
                     enumExtensionMethod.Members.AddRange(memberData);
+
+                    var extension = new EnumDescriptionExtension();
+                    extension.Namespace = enumSymbol.ContainingNamespace.ToString();
+                    extension.Methods.Add(enumExtensionMethod);
+                    extension.Name = "EnumExtensions";
+
+                    enumExtensionsToGenerate.Add(extension);
                 }
             }
 
@@ -96,27 +106,6 @@ public sealed partial class GetDescriptionGenerator
         private void ReportDiagnostic(DiagnosticDescriptor diagnostic, Location? location, params object?[]? messageArgs)
         {
             _reportDiagnostic(Diagnostic.Create(diagnostic, location, messageArgs));
-        }
-
-        internal sealed class EnumExtension
-        {
-            public string Namespace = string.Empty;
-            public string Name = string.Empty;
-            public readonly List<EnumExtensionMethod> Methods = new();
-        }
-
-        internal sealed class EnumExtensionMethod
-        {
-            public string Name = string.Empty;
-            public string UniqueName = string.Empty;
-            public string EnumName = string.Empty;
-            public readonly List<EnumMemberData> Members = new();
-        }
-
-        internal sealed class EnumMemberData
-        {
-            public string MemberName = string.Empty;
-            public string Value = string.Empty;
         }
     }
 }

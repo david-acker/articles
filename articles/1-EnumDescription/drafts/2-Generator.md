@@ -1,30 +1,25 @@
-**Article One: Introduction + Generator (Part 1)**
+# Performance Comparison: Reflection vs Switch Statement for Enum Descriptions in C#
+
+## Table of Contents
+
+- [Target Attribute Definition](#target-attribute-definition)
 
 ---
 
-### Introduction
-
-.NET's Roslyn platform provides powerful tools for developers to analyze and transform their code during the compilation process. Generators and Analyzers are two such tools that empower developers to enforce coding standards and automate code generation. In this series, we're going to delve deep into the creation of a Roslyn Generator and Analyzer combo aimed at enhancing the usability and maintainability of enums.
-
-Enums in .NET are a great way to represent a set of named constants. However, many times, there's a need for a more friendly or descriptive string than what the enum member provides. This is where the `DescriptionAttribute` shines. But managing these descriptions and ensuring every enum member has one can be a tedious task. Our Roslyn tools will simplify this.
-
-**Generator (Part 1)**
-
-#### Target Attribute Definition
+## Target Attribute Definition
 
 To focus our generator on specific enums, we'll use a target attribute. This ensures that the generator doesn't process every enum in your codebase but only those you specifically mark. Let's define our target attribute:
 
 ```csharp
-[AttributeUsage(AttributeTargets.Enum, Inherited = false)]
-public sealed class DescriptiveEnumAttribute : Attribute
+[AttributeUsage(AttributeTargets.Enum)]
+public sealed class EnumDescriptionAttribute : Attribute
 {
-    public DescriptiveEnumAttribute() { }
 }
 ```
 
 Enums marked with `[DescriptiveEnum]` will be targeted by our generator.
 
-#### Setting up the Generator
+## Setting up the Generator
 
 Start by creating a new class library project that targets .NET Standard 2.0 or higher. Add the `Microsoft.CodeAnalysis.CSharp` and `Microsoft.CodeAnalysis.Analyzers` NuGet packages.
 

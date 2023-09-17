@@ -1,34 +1,41 @@
 # Performance Comparison: Reflection vs Switch Statement for Enum Descriptions in C#
 
-When working with enums in C#, it's a common requirement to associate string descriptions with enum members. Two popular methods for achieving this are using the `DescriptionAttribute` with reflection, and using a switch statement. In this article, we'll compare the performance of these two approaches using `Benchmark.NET`.
-
 ## Table of Contents
 
+- [Scenario](#scenario)
 - [Reflection-Based Approach](#reflection-based-approach)
 - [Switch-Based Approach](#switch-based-approach)
 - [Performance Benchmarking](#performance-benchmarking)
 - [Comparison](#comparison)
 - [Next Steps](#next-steps)
 
-```csharp
-using System.ComponentModel;
+## Scenario
 
-public enum Colors
-{
-    [Description("Red")]
-    Red,
+When working with enums in C#, it's common want to associate a string description with each enum member.
 
-    [Description("Green")]
-    Green,
-
-    [Description("Blue")]
-    Blue
-}
-```
+For example, suppose we have a `Country` enum. The individual enum members could be `US`, `CA`, and `UK`. We may want to associate the descriptions `United States`, `Canada`, and `United Kingdom` with these enum members, respectively.
 
 ## Reflection-Based Approach
 
-In this approach, the `DescriptionAttribute` from `System.ComponentModel` is utilized to associate descriptions with enum members. Using reflection, these descriptions can be retrieved at runtime.
+One method of achieving this is by adding an attribute with the string description to each enum member, and using reflection to access the description values at runtime. In this approach, the `DescriptionAttribute` from `System.ComponentModel` is utilized to associate descriptions with enum members. 
+
+```csharp
+using System.ComponentModel;
+
+public enum Country
+{
+    [Description("United States")]
+    US,
+
+    [Description("Canada")]
+    CA,
+
+    [Description("United Kingdom")]
+    UK
+}
+```
+
+Using reflection, these descriptions can be retrieved at runtime.
 
 ```csharp
 using System;
@@ -40,15 +47,17 @@ public static class ReflectionEnumExtensions
     {
         FieldInfo fi = value.GetType().GetField(value.ToString());
 
-        DescriptionAttribute[] attributes =
-            (DescriptionAttribute[])fi.GetCustomAttributes(
-            typeof(DescriptionAttribute),
-            false);
+        var attributes = fi.GetCustomAttributes(typeof(DescriptionAttribute), false)
+            as DescriptionAttribute[];
 
-        if (attributes != null && attributes.Length > 0)
+        if (attributes is not null && attributes.Length > 0)
+        {
             return attributes[0].Description;
+        }
         else
+        {
             return value.ToString();
+        }
     }
 }
 ```
@@ -57,21 +66,21 @@ public static class ReflectionEnumExtensions
 
 ## Switch-Based Approach
 
-An alternative to using reflection is to utilize a switch statement to associate descriptions with enum members. This approach is generally more performant, but requires manual maintenance when adding or updating enum members.
+An alternative is to use a dedicated method containing a switch statement that associates a description with enum member. This approach is generally more performant, but requires manual maintenance to keep the enum and the `GetDescription` method in sync when adding or updating members.
 
 ```csharp
 public static class SwitchEnumExtensions
 {
-    public static string GetDescription(this Colors value)
+    public static string GetDescription(this Country value)
     {
         switch (value)
         {
-            case Colors.Red:
-                return "Red";
-            case Colors.Green:
-                return "Green";
-            case Colors.Blue:
-                return "Blue";
+            case Country.US:
+                return "United States";
+            case Country.CA:
+                return "Canada";
+            case Country.UK:
+                return "United Kingdom";
             default:
                 return string.Empty;
         }
@@ -83,11 +92,11 @@ public static class SwitchEnumExtensions
 
 ## Performance Benchmarking
 
-To compare the performance of these two methods, we use `Benchmark.NET`, a powerful .NET library for benchmarking.
+To compare the performance of these two methods, we'll use `Benchmark.NET`, a .NET library for benchmarking.
 
 Firstly, install the required package:
 
-```bash
+```powershell
 Install-Package BenchmarkDotNet
 ```
 

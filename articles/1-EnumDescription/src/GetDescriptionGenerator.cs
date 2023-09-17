@@ -14,13 +14,13 @@ public sealed partial class GetDescriptionGenerator : IIncrementalGenerator
         IncrementalValuesProvider<EnumDeclarationSyntax> enumDeclarations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 Parser.EnumDescriptionAttribute,
-                (node, _) => IsTargetForGeneration(node),
-                (syntaxContext, _) => GetTargetForGeneration(syntaxContext))
+                static (node, _) => IsTargetForGeneration(node),
+                static (syntaxContext, _) => GetTargetForGeneration(syntaxContext))
             .Where(static node => node is not null)!;
 
         IncrementalValueProvider<(Compilation, ImmutableArray<EnumDeclarationSyntax>)> compilationAndEnums =
             context.CompilationProvider.Combine(enumDeclarations.Collect());
-
+        
         context.RegisterSourceOutput(compilationAndEnums,
             static (spc, source) => Execute(source.Item1, source.Item2, spc));
     }
@@ -30,9 +30,31 @@ public sealed partial class GetDescriptionGenerator : IIncrementalGenerator
         return node is EnumDeclarationSyntax { AttributeLists.Count: > 0 };
     }
 
-    private static EnumDeclarationSyntax? GetTargetForGeneration(GeneratorAttributeSyntaxContext syntaxContext)
+    private static EnumDeclarationSyntax? GetTargetForGeneration(GeneratorAttributeSyntaxContext context)
     {
-        return syntaxContext.TargetNode as EnumDeclarationSyntax;
+        var enumDeclaration = (EnumDeclarationSyntax)context.TargetNode;
+
+        foreach (var attributeList in enumDeclaration.AttributeLists)
+        {
+            foreach (var attribute in attributeList.Attributes)
+            {
+                if (context.SemanticModel.GetSymbolInfo(attribute).Symbol is not IMethodSymbol
+                    attributeConstructorSymbol)
+                {
+                    continue;
+                }
+
+                var attributeSymbol = attributeConstructorSymbol.ContainingType;
+                var attributeSymbolName = attributeSymbol.ToDisplayString();
+
+                if (attributeSymbolName == Parser.EnumDescriptionAttribute)
+                {
+                    return enumDeclaration;
+                }
+            }
+        }
+
+        return null;
     }
     
     private static void Execute(
