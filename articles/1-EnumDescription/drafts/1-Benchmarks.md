@@ -1,4 +1,4 @@
-# Performance Comparison: Reflection vs Switch Statement for Enum Descriptions in C#
+# Enum Description: Benchmarking
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ For example, suppose we have a `Country` enum. The individual enum members could
 
 ## Reflection-Based Approach
 
-One method of achieving this is by adding an attribute with the string description to each enum member, and using reflection to access the description values at runtime. In this approach, the `DescriptionAttribute` from `System.ComponentModel` is utilized to associate descriptions with enum members. 
+One method of achieving this is by adding an attribute with the string description to each enum member, and then using reflection to access the description values at runtime. In this approach, the `DescriptionAttribute` from `System.ComponentModel` is utilized to associate descriptions with enum members.
 
 ```csharp
 using System.ComponentModel;
@@ -45,9 +45,9 @@ public static class ReflectionEnumExtensions
 {
     public static string GetDescription(this Enum value)
     {
-        FieldInfo fi = value.GetType().GetField(value.ToString());
+        FieldInfo fieldInfo = value.GetType().GetField(value.ToString());
 
-        var attributes = fi.GetCustomAttributes(typeof(DescriptionAttribute), false)
+        var attributes = fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false)
             as DescriptionAttribute[];
 
         if (attributes is not null && attributes.Length > 0)
@@ -62,11 +62,9 @@ public static class ReflectionEnumExtensions
 }
 ```
 
-> **⚠ Warning**: Relying on reflection might introduce performance overhead, especially when the method is called frequently.
-
 ## Switch-Based Approach
 
-An alternative is to use a dedicated method containing a switch statement that associates a description with enum member. This approach is generally more performant, but requires manual maintenance to keep the enum and the `GetDescription` method in sync when adding or updating members.
+An alternative is to use a dedicated method containing a switch statement to associate a description with each enum member. This approach will be more performant, but will require additional code changes to keep the `GetDescription` method in sync when adding or updating enum members.
 
 ```csharp
 public static class SwitchEnumExtensions
@@ -88,19 +86,9 @@ public static class SwitchEnumExtensions
 }
 ```
 
-> **ℹ Information**: Switch-based approaches are straightforward and could offer better performance than reflection-based methods. However, the code can become lengthy and harder to maintain as the number of enum members grows.
-
 ## Performance Benchmarking
 
 To compare the performance of these two methods, we'll use `Benchmark.NET`, a .NET library for benchmarking.
-
-Firstly, install the required package:
-
-```powershell
-Install-Package BenchmarkDotNet
-```
-
-The benchmark setup is as follows:
 
 ```csharp
 using BenchmarkDotNet.Attributes;
@@ -111,13 +99,13 @@ public class BenchmarkRunner
     [Benchmark]
     public void ReflectionBasedDescription()
     {
-        var description = ColorsWithDescription.Red.GetDescription();
+        var description = Country.UK.GetDescription();
     }
 
     [Benchmark]
     public void SwitchBasedDescription()
     {
-        var description = Colors.Red.GetDescription();
+        var description = Country.UK.GetDescription();
     }
 }
 
@@ -130,33 +118,15 @@ public class Program
 }
 ```
 
-## Comparison
-
-After running the benchmarks, we observed the following results:
+### Results
 
 | Method        |        Mean |      Error |    StdDev |   Gen0 | Allocated |
 | ------------- | ----------: | ---------: | --------: | -----: | --------: |
 | ViaReflection | 610.0784 ns | 10.6254 ns | 9.9390 ns | 0.1259 |     264 B |
 | ViaSwitch     |   0.8571 ns |  0.0017 ns | 0.0016 ns |      - |         - |
 
-From the mock data, the switch-based approach outperforms the reflection-based approach not only in execution time but also in memory allocation. While these performance improvements are in the nanosecond range and may seem negligible for many applications, the advantages become especially prominent in specific contexts.
-
-One significant context is Ahead-of-Time (AOT) compilation with C#. Reflection introduces challenges in AOT environments, where code is compiled prior to being deployed, as opposed to Just-in-Time (JIT) compilation where the code compiles during execution. Some AOT environments either limit reflection capabilities or don't support them at all, making the switch-based approach invaluable in such cases.
-
-**To Recap:**
-
-- For most applications, the difference of a few hundred nanoseconds may not make a noticeable impact. However, in tight loops or performance-critical sections, every nanosecond can count.
-- If you're targeting an AOT environment or need to ensure maximum compatibility and performance across diverse platforms, the switch-based approach becomes a clear winner.
-- For scenarios where clean code and ease of maintenance are of utmost importance, and performance is not a critical factor, the reflection-based approach with `DescriptionAttribute` remains an elegant solution.
-
-Always remember to evaluate your specific application needs and constraints when choosing an approach.
+The switch-based approach outperforms the reflection-based approach not only in execution time but also in memory allocation. While these performance improvements are likely negligible for most applications, the switch-based approach has an additional benefit of being compatible with applications using Ahead-of-Time (AOT) compilation, where the use of reflection is either limited or unsupported.
 
 ## Next Steps
 
-In light of the performance and compatibility benefits of the switch-based approach, we also need to acknowledge its drawbacks. The method is certainly less flexible, and maintainability becomes a challenge. Each time a new enum member is introduced, the description-retrieval method requires manual updating, potentially leading to missed descriptions or errors if overlooked.
-
-So, what if we could merge the best of both worlds? A system that boasts the performance and compatibility of the switch-based approach, but also the flexibility and maintainability of the reflection-based method?
-
-**In our next article, we'll delve into the world of Source Generators in C#.** This powerful tool can auto-generate the necessary switch cases or other code constructs at compile time, ensuring you get the optimal performance without compromising on ease of management.
-
-[Read on to discover the magic of Source Generators in C#!](/articles/1-EnumDescription/drafts/2-Generator.md)
+Next, we'll delve into the world of source generators, which will allow us the craft a solution that boasts the performance and compatibility of the switch-based approach, without sacrificing the flexibility and maintainability of the reflection-based method.
