@@ -39,7 +39,7 @@ public enum Country
 }
 ```
 
-The following `GetDescription` extension method then uses reflection use retrieve the description values at runtime.
+The following `GetDescription` extension method then uses reflection to retrieve the description values at runtime.
 
 ```csharp
 using System;
@@ -131,4 +131,4 @@ The switch-based approach outperforms the reflection-based approach not only in 
 
 ## Next Steps
 
-Next, we'll dive into source generators and create a solution that combines the benefits of both the switch-based approach and the reflection-based approach.
+Next, we'll dive into source generators to create a solution which combines the benefits of both the switch-based approach and the reflection-based approach.
