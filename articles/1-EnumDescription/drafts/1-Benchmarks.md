@@ -43,25 +43,24 @@ The following `GetDescription` extension method then uses reflection to retrieve
 
 ```csharp
 using System;
+using System.ComponentModel;
 using System.Reflection;
 
 public static class ReflectionEnumExtensions
 {
     public static string GetDescription(this Enum value)
     {
-        FieldInfo fieldInfo = value.GetType().GetField(value.ToString());
+        var fieldInfo = value.GetType().GetField(value.ToString());
 
         var attributes = fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false)
             as DescriptionAttribute[];
 
-        if (attributes is not null && attributes.Length > 0)
+        if (attributes is null || attributes.Length == 0)
         {
-            return attributes[0].Description;
+            return string.Empty;
         }
-        else
-        {
-            return value.ToString();
-        }
+
+        return attributes[0].Description;
     }
 }
 ```
