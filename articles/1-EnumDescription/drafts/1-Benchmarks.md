@@ -24,8 +24,6 @@ One way to achieve this is by adding an attribute with the string description to
 In following example, the `DescriptionAttribute` from `System.ComponentModel` is utilized to associate descriptions with enum members.
 
 ```csharp
-using System.ComponentModel;
-
 public enum Country
 {
     [Description("United States")]
@@ -42,17 +40,13 @@ public enum Country
 The following `GetDescription` extension method then uses reflection to retrieve the description values at runtime.
 
 ```csharp
-using System;
-using System.ComponentModel;
-using System.Reflection;
-
 public static class ReflectionEnumExtensions
 {
     public static string GetDescription(this Enum value)
     {
         var fieldInfo = value.GetType().GetField(value.ToString());
 
-        var attributes = fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false)
+        var attributes = fieldInfo?.GetCustomAttributes(typeof(DescriptionAttribute), false)
             as DescriptionAttribute[];
 
         if (attributes is null || attributes.Length == 0)
@@ -95,18 +89,19 @@ To compare the performance of these two methods, we'll use [`Benchmark.NET`](htt
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
-public class BenchmarkRunner
+[MemoryDiagnoser]
+public class EnumExtensionsBenchmark
 {
     [Benchmark]
-    public void ReflectionBasedDescription()
+    public string ViaReflection()
     {
-        var description = Country.UK.GetDescription();
+        return ReflectionEnumExtensions.GetDescription(Country.UK);
     }
 
     [Benchmark]
-    public void SwitchBasedDescription()
+    public string ViaSwitch()
     {
-        var description = Country.UK.GetDescription();
+        return Country.UK.GetDescription();
     }
 }
 
@@ -114,7 +109,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var summary = BenchmarkRunner.Run<BenchmarkRunner>();
+        var summary = BenchmarkRunner.Run<EnumExtensionsBenchmark>();
     }
 }
 ```
